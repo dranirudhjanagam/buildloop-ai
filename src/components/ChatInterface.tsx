@@ -1,90 +1,147 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import TypingIndicator from "./TypingIndicator";
 
 interface Message {
-  role: "ai" | "user";
+  role: "assistant" | "user";
   content: string;
 }
 
-const AI_QUESTIONS = [
-  "Who is your target user? Describe them in detail — their role, daily struggles, and what motivates them.",
-  "What exact problem are you solving for them? Be specific about the pain point.",
-  "Why is this problem urgent? What happens if they don't solve it now?",
-  "What alternatives or workarounds exist today? How do people currently deal with this?",
-  "Why will users choose your solution over everything else? What's your unfair advantage?",
-];
-
 interface ChatInterfaceProps {
   idea: string;
-  onComplete: (answers: string[]) => void;
+  onComplete: (conversation: Message[]) => void;
 }
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<string[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [questionCount, setQuestionCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    // Initial AI message
-    setTyping(true);
-    const t1 = setTimeout(() => {
-      setMessages([
-        { role: "ai", content: `Great idea! "${idea}" — let me help you validate it. I'll ask you 5 key questions.` },
-      ]);
-      setTyping(false);
-    }, 1500);
-
-    const t2 = setTimeout(() => {
-      setTyping(true);
-    }, 2000);
-
-    const t3 = setTimeout(() => {
-      setMessages((prev) => [...prev, { role: "ai", content: AI_QUESTIONS[0] }]);
-      setTyping(false);
-    }, 3500);
-
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    // Kick off the conversation with the idea
+    streamAIResponse([
+      { role: "user", content: `My startup idea is: "${idea}". Please begin the validation process.` },
+    ]);
   }, [idea]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, typing]);
+  }, [messages, isStreaming]);
 
-  const handleSend = () => {
-    if (!input.trim() || typing) return;
+  const streamAIResponse = async (conversationMessages: Message[]) => {
+    setIsStreaming(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    const userMsg = input.trim();
-    setInput("");
-    const newAnswers = [...answers, userMsg];
-    setAnswers(newAnswers);
-    setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: conversationMessages }),
+        signal: controller.signal,
+      });
 
-    const nextIdx = questionIndex + 1;
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        if (resp.status === 429) toast({ title: "Rate limited", description: "Please wait a moment and try again.", variant: "destructive" });
+        else if (resp.status === 402) toast({ title: "Credits exhausted", description: "Please add funds to continue.", variant: "destructive" });
+        else toast({ title: "Error", description: err.error || "Something went wrong", variant: "destructive" });
+        setIsStreaming(false);
+        return;
+      }
 
-    if (nextIdx >= AI_QUESTIONS.length) {
-      setTyping(true);
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          { role: "ai", content: "Excellent! I've gathered all the insights I need. Let me generate your validation report..." },
-        ]);
-        setTyping(false);
-        setTimeout(() => onComplete(newAnswers), 2000);
-      }, 1500);
-    } else {
-      setQuestionIndex(nextIdx);
-      setTyping(true);
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { role: "ai", content: AI_QUESTIONS[nextIdx] }]);
-        setTyping(false);
-      }, 1500);
+      const reader = resp.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assistantContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "" || !line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (last?.role === "assistant") {
+                  return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
+                }
+                return [...prev, { role: "assistant", content: assistantContent }];
+              });
+            }
+          } catch {
+            buffer = line + "\n" + buffer;
+            break;
+          }
+        }
+      }
+
+      // Check if validation is complete
+      if (assistantContent.includes("VALIDATION_COMPLETE")) {
+        // Clean the marker from display
+        const cleanContent = assistantContent.replace("VALIDATION_COMPLETE", "").trim();
+        setMessages((prev) =>
+          prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: cleanContent || "Excellent! I've gathered all the insights I need. Let me generate your validation report..." } : m))
+        );
+        const finalConversation = [...conversationMessages, { role: "assistant" as const, content: cleanContent }];
+        setTimeout(() => onComplete(finalConversation), 2000);
+      } else {
+        setQuestionCount((c) => c + 1);
+      }
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        toast({ title: "Error", description: "Failed to get AI response", variant: "destructive" });
+      }
+    } finally {
+      setIsStreaming(false);
     }
   };
+
+  const handleSend = () => {
+    if (!input.trim() || isStreaming) return;
+
+    const userMsg: Message = { role: "user", content: input.trim() };
+    setInput("");
+
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+
+    // Build the full conversation including the initial idea context
+    const fullConversation: Message[] = [
+      { role: "user", content: `My startup idea is: "${idea}". Please begin the validation process.` },
+      ...newMessages,
+    ];
+
+    streamAIResponse(fullConversation);
+  };
+
+  const displayMessages = messages.filter(
+    (m) => !(m.role === "user" && m.content.startsWith('My startup idea is: "'))
+  );
 
   return (
     <div className="min-h-screen flex flex-col max-w-3xl mx-auto px-4">
@@ -95,13 +152,12 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
         </div>
         <div>
           <h2 className="font-display font-semibold text-foreground text-sm">BuildLoop AI</h2>
-          <p className="text-xs text-muted-foreground">Question {Math.min(questionIndex + 1, 5)} of 5</p>
+          <p className="text-xs text-muted-foreground">Question {Math.min(questionCount + 1, 5)} of 5</p>
         </div>
-        {/* Progress bar */}
         <div className="ml-auto w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-primary rounded-full"
-            animate={{ width: `${((questionIndex + (answers.length > questionIndex ? 1 : 0)) / 5) * 100}%` }}
+            animate={{ width: `${(Math.min(questionCount, 5) / 5) * 100}%` }}
             transition={{ duration: 0.4 }}
           />
         </div>
@@ -110,7 +166,7 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-6 space-y-4">
         <AnimatePresence>
-          {messages.map((msg, i) => (
+          {displayMessages.map((msg, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 10 }}
@@ -118,7 +174,7 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
               transition={{ duration: 0.3 }}
               className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
             >
-              {msg.role === "ai" && (
+              {msg.role === "assistant" && (
                 <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
                   <Bot className="w-3.5 h-3.5 text-primary" />
                 </div>
@@ -141,7 +197,7 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
           ))}
         </AnimatePresence>
 
-        {typing && (
+        {isStreaming && displayMessages[displayMessages.length - 1]?.role !== "assistant" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
             <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Bot className="w-3.5 h-3.5 text-primary" />
@@ -163,12 +219,12 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Type your answer..."
             className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            disabled={typing}
+            disabled={isStreaming}
           />
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleSend}
-            disabled={!input.trim() || typing}
+            disabled={!input.trim() || isStreaming}
             className="p-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-40 transition-all"
           >
             <Send className="w-4 h-4" />

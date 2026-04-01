@@ -1,40 +1,80 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw } from "lucide-react";
+import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
+interface Message {
+  role: "assistant" | "user";
+  content: string;
+}
+
+interface Section {
+  title: string;
+  content: string;
+}
 
 interface ResultsDashboardProps {
   idea: string;
-  answers: string[];
+  conversation: Message[];
   onRestart: () => void;
 }
 
-const ResultsDashboard = ({ idea, answers, onRestart }: ResultsDashboardProps) => {
-  const sections = [
-    {
-      icon: Target,
-      title: "Problem Statement",
-      content: `Your target users face the problem of: ${answers[1] || "N/A"}. This is urgent because ${answers[2] || "N/A"}.`,
-    },
-    {
-      icon: Users,
-      title: "Ideal Customer Profile",
-      content: `Primary user: ${answers[0] || "N/A"}. They currently deal with this by using: ${answers[3] || "existing alternatives"}.`,
-    },
-    {
-      icon: Rocket,
-      title: "MVP Idea",
-      content: `Build a focused solution for "${idea}" that specifically addresses the core pain point. Start with the smallest version that delivers value to your target user and differentiates through: ${answers[4] || "your unique approach"}.`,
-    },
-    {
-      icon: ClipboardCheck,
-      title: "Validation Plan",
-      content: `1. Interview 10-15 potential users matching your ICP\n2. Build a landing page to test messaging and collect signups\n3. Create a no-code prototype for user testing\n4. Run a 2-week pre-sale or waitlist campaign\n5. Measure conversion rates and gather qualitative feedback`,
-    },
-    {
-      icon: AlertTriangle,
-      title: "Key Risks",
-      content: `• Market risk: Existing alternatives (${answers[3] || "competitors"}) may be "good enough"\n• Adoption risk: Users may not perceive urgency strongly enough\n• Execution risk: Building too much before validating core assumptions\n• Differentiation risk: Your advantage (${answers[4] || "unique value"}) needs continuous reinforcement`,
-    },
-  ];
+const SECTION_ICONS = [Target, Users, Rocket, ClipboardCheck, AlertTriangle];
+
+const ResultsDashboard = ({ idea, conversation, onRestart }: ResultsDashboardProps) => {
+  const [sections, setSections] = useState<Section[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    generateReport();
+  }, []);
+
+  const generateReport = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-report", {
+        body: { idea, conversation },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.sections) {
+        setSections(data.sections);
+      } else {
+        throw new Error("Invalid report format");
+      }
+    } catch (e: any) {
+      console.error("Report generation error:", e);
+      toast({ title: "Error", description: "Failed to generate report. Using fallback.", variant: "destructive" });
+      // Fallback sections
+      setSections([
+        { title: "Problem Statement", content: "Could not generate AI report. Please try again." },
+        { title: "Ideal Customer Profile", content: "N/A" },
+        { title: "MVP Idea", content: "N/A" },
+        { title: "Validation Plan", content: "N/A" },
+        { title: "Key Risks", content: "N/A" },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center space-y-4"
+        >
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+          <p className="text-muted-foreground text-sm">Generating your validation report...</p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen px-6 py-12 relative">
@@ -54,25 +94,28 @@ const ResultsDashboard = ({ idea, answers, onRestart }: ResultsDashboardProps) =
         </motion.div>
 
         <div className="space-y-5">
-          {sections.map((section, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 * i, duration: 0.5 }}
-              className="bg-card border border-border rounded-xl p-6"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <section.icon className="w-4.5 h-4.5 text-primary" />
+          {sections.map((section, i) => {
+            const Icon = SECTION_ICONS[i] || Target;
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 * i, duration: 0.5 }}
+                className="bg-card border border-border rounded-xl p-6"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Icon className="w-4.5 h-4.5 text-primary" />
+                  </div>
+                  <h3 className="font-display font-semibold text-lg text-foreground">{section.title}</h3>
                 </div>
-                <h3 className="font-display font-semibold text-lg text-foreground">{section.title}</h3>
-              </div>
-              <p className="text-sm text-secondary-foreground leading-relaxed whitespace-pre-line">
-                {section.content}
-              </p>
-            </motion.div>
-          ))}
+                <p className="text-sm text-secondary-foreground leading-relaxed whitespace-pre-line">
+                  {section.content}
+                </p>
+              </motion.div>
+            );
+          })}
         </div>
 
         <motion.div
