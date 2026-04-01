@@ -1,16 +1,49 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import LandingPage from "@/components/LandingPage";
+import IdeaInput from "@/components/IdeaInput";
+import ChatInterface from "@/components/ChatInterface";
+import ResultsDashboard from "@/components/ResultsDashboard";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+type Screen = "landing" | "idea" | "chat" | "results";
+
+const Index = () => {
+  const [screen, setScreen] = useState<Screen>("landing");
+  const [idea, setIdea] = useState("");
+  const [answers, setAnswers] = useState<string[]>([]);
+
+  const handleIdeaSubmit = (text: string) => {
+    setIdea(text);
+    setScreen("chat");
+  };
+
+  const handleChatComplete = (userAnswers: string[]) => {
+    setAnswers(userAnswers);
+    setScreen("results");
+  };
+
+  const handleRestart = () => {
+    setIdea("");
+    setAnswers([]);
+    setScreen("landing");
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={screen}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {screen === "landing" && <LandingPage onStart={() => setScreen("idea")} />}
+        {screen === "idea" && <IdeaInput onSubmit={handleIdeaSubmit} />}
+        {screen === "chat" && <ChatInterface idea={idea} onComplete={handleChatComplete} />}
+        {screen === "results" && <ResultsDashboard idea={idea} answers={answers} onRestart={handleRestart} />}
+      </motion.div>
+    </AnimatePresence>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
