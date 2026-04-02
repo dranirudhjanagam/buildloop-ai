@@ -20,14 +20,22 @@ Startup Idea: "${idea}"
 Conversation:
 ${conversation.map((m: { role: string; content: string }) => `${m.role}: ${m.content}`).join("\n")}
 
-Generate a JSON response with exactly these 5 sections. Each section should have a "title" and "content" field. Be specific, actionable, and realistic.
+Generate a JSON response with:
+1. A "sections" array with exactly 5 objects, each having "title" and "content":
+   - Problem Statement
+   - Ideal Customer Profile
+   - MVP Idea
+   - Validation Plan
+   - Key Risks
 
-Sections:
-1. Problem Statement - Clearly define the problem and its urgency
-2. Ideal Customer Profile - Describe the target user in detail
-3. MVP Idea - Propose a focused minimum viable product
-4. Validation Plan - Provide 5 concrete validation steps
-5. Key Risks - List 4-5 specific risks with context`;
+2. A "scores" object with:
+   - problem_clarity (integer 1-10)
+   - market_need (integer 1-10)
+   - feasibility (integer 1-10)
+   - risk_level (string: "Low", "Medium", or "High")
+   - overall_score (integer 0-100)
+
+Be specific, actionable, and realistic. Scores should honestly reflect the strength of the idea based on the conversation.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -46,7 +54,7 @@ Sections:
             type: "function",
             function: {
               name: "generate_report",
-              description: "Generate a startup validation report with 5 sections",
+              description: "Generate a startup validation report with sections and scores",
               parameters: {
                 type: "object",
                 properties: {
@@ -62,8 +70,20 @@ Sections:
                       additionalProperties: false,
                     },
                   },
+                  scores: {
+                    type: "object",
+                    properties: {
+                      problem_clarity: { type: "number" },
+                      market_need: { type: "number" },
+                      feasibility: { type: "number" },
+                      risk_level: { type: "string", enum: ["Low", "Medium", "High"] },
+                      overall_score: { type: "number" },
+                    },
+                    required: ["problem_clarity", "market_need", "feasibility", "risk_level", "overall_score"],
+                    additionalProperties: false,
+                  },
                 },
-                required: ["sections"],
+                required: ["sections", "scores"],
                 additionalProperties: false,
               },
             },
