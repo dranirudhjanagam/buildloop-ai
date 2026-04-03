@@ -253,8 +253,19 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="flex justify-center mt-10"
+          className="flex justify-center gap-4 mt-10"
         >
+          {onSave && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onSave(sections, scores)}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium glow-border"
+            >
+              <Save className="w-4 h-4" />
+              Save Project
+            </motion.button>
+          )}
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
