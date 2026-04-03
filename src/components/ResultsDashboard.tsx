@@ -27,6 +27,8 @@ interface ResultsDashboardProps {
   idea: string;
   conversation: Message[];
   onRestart: () => void;
+  savedSections?: Section[];
+  savedScores?: Scores;
 }
 
 const SECTION_ICONS = [Target, Users, Rocket, ClipboardCheck, AlertTriangle];
