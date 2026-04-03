@@ -65,13 +65,13 @@ const getOverallRingColor = (score: number) => {
   return "stroke-red-500";
 };
 
-const ResultsDashboard = ({ idea, conversation, onRestart }: ResultsDashboardProps) => {
-  const [sections, setSections] = useState<Section[]>([]);
-  const [scores, setScores] = useState<Scores | null>(null);
-  const [loading, setLoading] = useState(true);
+const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedScores }: ResultsDashboardProps) => {
+  const [sections, setSections] = useState<Section[]>(savedSections || []);
+  const [scores, setScores] = useState<Scores | null>(savedScores || null);
+  const [loading, setLoading] = useState(!savedSections);
 
   useEffect(() => {
-    generateReport();
+    if (!savedSections) generateReport();
   }, []);
 
   const generateReport = async () => {
