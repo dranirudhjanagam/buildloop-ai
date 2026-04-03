@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw, Loader2, TrendingUp, Brain, Gauge, ShieldAlert } from "lucide-react";
+import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw, Loader2, TrendingUp, Brain, Gauge, ShieldAlert, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -27,6 +27,9 @@ interface ResultsDashboardProps {
   idea: string;
   conversation: Message[];
   onRestart: () => void;
+  savedSections?: Section[];
+  savedScores?: Scores;
+  onSave?: (sections: Section[], scores: Scores | null) => void;
 }
 
 const SECTION_ICONS = [Target, Users, Rocket, ClipboardCheck, AlertTriangle];
@@ -63,13 +66,13 @@ const getOverallRingColor = (score: number) => {
   return "stroke-red-500";
 };
 
-const ResultsDashboard = ({ idea, conversation, onRestart }: ResultsDashboardProps) => {
-  const [sections, setSections] = useState<Section[]>([]);
-  const [scores, setScores] = useState<Scores | null>(null);
-  const [loading, setLoading] = useState(true);
+const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedScores, onSave }: ResultsDashboardProps) => {
+  const [sections, setSections] = useState<Section[]>(savedSections || []);
+  const [scores, setScores] = useState<Scores | null>(savedScores || null);
+  const [loading, setLoading] = useState(!savedSections);
 
   useEffect(() => {
-    generateReport();
+    if (!savedSections) generateReport();
   }, []);
 
   const generateReport = async () => {
@@ -250,8 +253,19 @@ const ResultsDashboard = ({ idea, conversation, onRestart }: ResultsDashboardPro
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="flex justify-center mt-10"
+          className="flex justify-center gap-4 mt-10"
         >
+          {onSave && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onSave(sections, scores)}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium glow-border"
+            >
+              <Save className="w-4 h-4" />
+              Save Project
+            </motion.button>
+          )}
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
