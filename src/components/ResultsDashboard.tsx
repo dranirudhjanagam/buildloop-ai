@@ -66,7 +66,7 @@ const getOverallRingColor = (score: number) => {
   return "stroke-red-500";
 };
 
-const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedScores }: ResultsDashboardProps) => {
+const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedScores, onSave }: ResultsDashboardProps) => {
   const [sections, setSections] = useState<Section[]>(savedSections || []);
   const [scores, setScores] = useState<Scores | null>(savedScores || null);
   const [loading, setLoading] = useState(!savedSections);
