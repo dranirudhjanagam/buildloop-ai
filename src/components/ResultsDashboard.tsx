@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw, Loader2, TrendingUp, Brain, Gauge, ShieldAlert, Save } from "lucide-react";
+import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw, TrendingUp, Brain, Gauge, ShieldAlert, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
+import CircularProgress from "./CircularProgress";
+import LoadingSkeleton from "./LoadingSkeleton";
+import AnimatedBackground from "./AnimatedBackground";
 
 interface Message {
   role: "assistant" | "user";
@@ -41,11 +43,11 @@ const getScoreColor = (score: number, max: number = 10) => {
   return "text-red-400";
 };
 
-const getProgressColor = (score: number, max: number = 10) => {
-  const pct = (score / max) * 100;
-  if (pct >= 70) return "[&>div]:bg-green-500";
-  if (pct >= 40) return "[&>div]:bg-yellow-500";
-  return "[&>div]:bg-red-500";
+const getBarColor = (score: number) => {
+  const pct = score * 10;
+  if (pct >= 70) return "bg-green-500";
+  if (pct >= 40) return "bg-yellow-500";
+  return "bg-red-500";
 };
 
 const getRiskColor = (level: string) => {
@@ -80,12 +82,9 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
       const { data, error } = await supabase.functions.invoke("generate-report", {
         body: { idea, conversation },
       });
-
       if (error) throw error;
-
       if (data?.sections) setSections(data.sections);
       else throw new Error("Invalid report format");
-
       if (data?.scores) setScores(data.scores);
     } catch (e: any) {
       console.error("Report generation error:", e);
@@ -102,35 +101,24 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center space-y-4">
-          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
-          <p className="text-muted-foreground text-sm">Generating your validation report...</p>
-        </motion.div>
-      </div>
-    );
-  }
-
-  const circumference = 2 * Math.PI * 54;
-  const overallOffset = scores ? circumference - (scores.overall_score / 100) * circumference : circumference;
+  if (loading) return <LoadingSkeleton />;
 
   return (
     <div className="min-h-screen px-6 py-12 relative">
-      <div className="absolute inset-0 dot-grid opacity-15" />
+      <AnimatedBackground />
+      <div className="absolute inset-0 dot-grid opacity-10" />
 
       <div className="relative z-10 max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-14"
         >
-          <h1 className="font-display text-3xl sm:text-4xl font-bold mb-2">
+          <h1 className="font-display text-4xl sm:text-5xl font-bold mb-3 tracking-tight">
             Your <span className="gradient-text">Validation Report</span>
           </h1>
-          <p className="text-muted-foreground">AI-generated insights for: "{idea}"</p>
+          <p className="text-muted-foreground text-lg">AI-generated insights for: "{idea}"</p>
         </motion.div>
 
         {/* Validation Score Section */}
@@ -139,38 +127,27 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.6 }}
-            className="mb-10"
+            className="mb-12"
           >
-            <h2 className="font-display text-xl font-semibold text-foreground mb-5 text-center">Validation Score</h2>
+            <h2 className="font-display text-xl font-semibold text-foreground mb-6 text-center">Validation Score</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {/* Overall Score - Large */}
+              {/* Overall Score */}
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
-                className="md:row-span-2 bg-card border border-border rounded-xl p-6 flex flex-col items-center justify-center"
+                className="md:row-span-2 glass rounded-2xl p-8 flex flex-col items-center justify-center hover-lift"
               >
-                <p className="text-sm text-muted-foreground mb-3">Overall Score</p>
-                <div className="relative w-32 h-32">
-                  <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="54" fill="none" strokeWidth="8" className="stroke-secondary" />
-                    <motion.circle
-                      cx="60" cy="60" r="54" fill="none" strokeWidth="8"
-                      className={getOverallRingColor(scores.overall_score)}
-                      strokeLinecap="round"
-                      strokeDasharray={circumference}
-                      initial={{ strokeDashoffset: circumference }}
-                      animate={{ strokeDashoffset: overallOffset }}
-                      transition={{ delay: 0.5, duration: 1.2, ease: "easeOut" }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`font-display text-3xl font-bold ${getOverallColor(scores.overall_score)}`}>
-                      {scores.overall_score}%
-                    </span>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground mb-4">Overall Score</p>
+                <CircularProgress
+                  value={scores.overall_score}
+                  size={140}
+                  strokeWidth={10}
+                  colorClass={getOverallColor(scores.overall_score)}
+                  ringClass={getOverallRingColor(scores.overall_score)}
+                  delay={0.5}
+                />
               </motion.div>
 
               {/* Individual Scores */}
@@ -184,21 +161,25 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + i * 0.1, duration: 0.5 }}
-                  className="bg-card border border-border rounded-xl p-5"
+                  className="glass rounded-2xl p-5 hover-lift"
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <item.icon className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">{item.label}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`font-display text-2xl font-bold ${getScoreColor(item.value)}`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className={`font-display text-3xl font-bold ${getScoreColor(item.value)}`}>
                       {item.value}<span className="text-sm text-muted-foreground font-normal">/10</span>
                     </span>
                   </div>
-                  <Progress
-                    value={item.value * 10}
-                    className={`h-2 mt-3 bg-secondary ${getProgressColor(item.value)}`}
-                  />
+                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                    <motion.div
+                      className={`h-full rounded-full ${getBarColor(item.value)}`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${item.value * 10}%` }}
+                      transition={{ delay: 0.5 + i * 0.1, duration: 0.8, ease: "easeOut" }}
+                    />
+                  </div>
                 </motion.div>
               ))}
 
@@ -207,14 +188,14 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.6, duration: 0.5 }}
-                className="bg-card border border-border rounded-xl p-5 flex items-center gap-4"
+                className="glass rounded-2xl p-5 flex items-center gap-4 hover-lift"
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${getRiskColor(scores.risk_level)}`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${getRiskColor(scores.risk_level)}`}>
                   <ShieldAlert className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Risk Level</p>
-                  <p className={`font-display text-lg font-bold ${getRiskColor(scores.risk_level).split(" ")[0]}`}>
+                  <p className={`font-display text-xl font-bold ${getRiskColor(scores.risk_level).split(" ")[0]}`}>
                     {scores.risk_level}
                   </p>
                 </div>
@@ -233,13 +214,13 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 * i + (scores ? 0.7 : 0), duration: 0.5 }}
-                className="bg-card border border-border rounded-xl p-6"
+                className="glass rounded-2xl p-6 hover-lift"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Icon className="w-4.5 h-4.5 text-primary" />
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Icon className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="font-display font-semibold text-lg text-foreground">{section.title}</h3>
+                  <h3 className="font-display font-semibold text-xl text-foreground">{section.title}</h3>
                 </div>
                 <p className="text-sm text-secondary-foreground leading-relaxed whitespace-pre-line">
                   {section.content}
@@ -253,24 +234,24 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="flex justify-center gap-4 mt-10"
+          className="flex justify-center gap-4 mt-12"
         >
           {onSave && (
             <motion.button
-              whileHover={{ scale: 1.03 }}
+              whileHover={{ scale: 1.03, y: -1 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => onSave(sections, scores)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium glow-border"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold glow-border transition-all"
             >
               <Save className="w-4 h-4" />
               Save Project
             </motion.button>
           )}
           <motion.button
-            whileHover={{ scale: 1.03 }}
+            whileHover={{ scale: 1.03, y: -1 }}
             whileTap={{ scale: 0.97 }}
             onClick={onRestart}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-border bg-card text-foreground font-medium hover:bg-secondary transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl glass font-semibold text-foreground hover-lift"
           >
             <RotateCcw className="w-4 h-4" />
             Start Over
