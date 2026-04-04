@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
+import LandingPage from "./components/LandingPage";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
