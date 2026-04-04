@@ -43,6 +43,21 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function LandingRoute() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+      </div>
+    );
+  }
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <LandingPage />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
