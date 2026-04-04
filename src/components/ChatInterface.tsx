@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import TypingIndicator from "./TypingIndicator";
+import AnimatedBackground from "./AnimatedBackground";
 
 interface Message {
   role: "assistant" | "user";
@@ -25,7 +26,6 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    // Kick off the conversation with the idea
     streamAIResponse([
       { role: "user", content: `My startup idea is: "${idea}". Please begin the validation process.` },
     ]);
@@ -100,9 +100,7 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
         }
       }
 
-      // Check if validation is complete
       if (assistantContent.includes("VALIDATION_COMPLETE")) {
-        // Clean the marker from display
         const cleanContent = assistantContent.replace("VALIDATION_COMPLETE", "").trim();
         setMessages((prev) =>
           prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: cleanContent || "Excellent! I've gathered all the insights I need. Let me generate your validation report..." } : m))
@@ -123,19 +121,14 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
 
   const handleSend = () => {
     if (!input.trim() || isStreaming) return;
-
     const userMsg: Message = { role: "user", content: input.trim() };
     setInput("");
-
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
-
-    // Build the full conversation including the initial idea context
     const fullConversation: Message[] = [
       { role: "user", content: `My startup idea is: "${idea}". Please begin the validation process.` },
       ...newMessages,
     ];
-
     streamAIResponse(fullConversation);
   };
 
@@ -143,28 +136,32 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
     (m) => !(m.role === "user" && m.content.startsWith('My startup idea is: "'))
   );
 
+  const progressPct = (Math.min(questionCount, 5) / 5) * 100;
+
   return (
-    <div className="min-h-screen flex flex-col max-w-3xl mx-auto px-4">
+    <div className="min-h-screen flex flex-col max-w-3xl mx-auto px-4 relative">
+      <AnimatedBackground />
+
       {/* Header */}
-      <div className="py-5 border-b border-border flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+      <div className="relative z-10 py-5 border-b border-border/50 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
           <Bot className="w-4 h-4 text-primary" />
         </div>
         <div>
-          <h2 className="font-display font-semibold text-foreground text-sm">BuildLoop AI</h2>
+          <h2 className="font-display font-semibold text-foreground">BuildLoop AI</h2>
           <p className="text-xs text-muted-foreground">Question {Math.min(questionCount + 1, 5)} of 5</p>
         </div>
-        <div className="ml-auto w-32 h-1.5 bg-secondary rounded-full overflow-hidden">
+        <div className="ml-auto w-36 h-2 bg-secondary rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-primary rounded-full"
-            animate={{ width: `${(Math.min(questionCount, 5) / 5) * 100}%` }}
+            animate={{ width: `${progressPct}%` }}
             transition={{ duration: 0.4 }}
           />
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto py-6 space-y-4">
+      <div className="relative z-10 flex-1 overflow-y-auto py-6 space-y-4">
         <AnimatePresence>
           {displayMessages.map((msg, i) => (
             <motion.div
@@ -175,22 +172,22 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
               className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
             >
               {msg.role === "assistant" && (
-                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                  <Bot className="w-3.5 h-3.5 text-primary" />
+                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
+                  <Bot className="w-4 h-4 text-primary" />
                 </div>
               )}
               <div
                 className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground rounded-br-md"
-                    : "bg-card border border-border text-foreground rounded-bl-md"
+                    : "glass rounded-bl-md"
                 }`}
               >
                 {msg.content}
               </div>
               {msg.role === "user" && (
-                <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0 mt-1">
-                  <User className="w-3.5 h-3.5 text-secondary-foreground" />
+                <div className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 mt-1">
+                  <User className="w-4 h-4 text-secondary-foreground" />
                 </div>
               )}
             </motion.div>
@@ -199,10 +196,10 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
 
         {isStreaming && displayMessages[displayMessages.length - 1]?.role !== "assistant" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Bot className="w-3.5 h-3.5 text-primary" />
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Bot className="w-4 h-4 text-primary" />
             </div>
-            <div className="bg-card border border-border rounded-2xl rounded-bl-md">
+            <div className="glass rounded-2xl rounded-bl-md">
               <TypingIndicator />
             </div>
           </motion.div>
@@ -211,21 +208,22 @@ const ChatInterface = ({ idea, onComplete }: ChatInterfaceProps) => {
       </div>
 
       {/* Input */}
-      <div className="py-4 border-t border-border">
+      <div className="relative z-10 py-4 border-t border-border/50">
         <div className="flex gap-3 items-center">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Type your answer..."
-            className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="flex-1 glass rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             disabled={isStreaming}
           />
           <motion.button
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleSend}
             disabled={!input.trim() || isStreaming}
-            className="p-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-40 transition-all"
+            className="p-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-40 transition-all glow-border"
           >
             <Send className="w-4 h-4" />
           </motion.button>

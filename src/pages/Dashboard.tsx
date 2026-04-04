@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Plus, LogOut, Zap, Calendar, TrendingUp } from "lucide-react";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 interface Project {
   id: string;
@@ -40,19 +41,21 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen px-6 py-8 relative">
+      <AnimatedBackground />
       <div className="absolute inset-0 dot-grid opacity-10" />
 
       <div className="relative z-10 max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center justify-between mb-12">
           <div className="flex items-center gap-3">
             <Zap className="w-6 h-6 text-primary" />
-            <h1 className="font-display text-2xl font-bold text-foreground">My Projects</h1>
+            <h1 className="font-display text-3xl font-bold text-foreground">My Projects</h1>
           </div>
           <div className="flex items-center gap-3">
             <motion.button
+              whileHover={{ scale: 1.03, y: -1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate("/")}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm glow-border"
             >
               <Plus className="w-4 h-4" />
               New Project
@@ -60,7 +63,7 @@ const Dashboard = () => {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={signOut}
-              className="p-2.5 rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground transition-colors"
+              className="p-2.5 rounded-xl glass text-muted-foreground hover:text-foreground transition-colors"
               title="Sign out"
             >
               <LogOut className="w-4 h-4" />
@@ -69,20 +72,31 @@ const Dashboard = () => {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <div className="grid gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="glass rounded-2xl p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2 flex-1">
+                    <div className="skeleton-shimmer h-5 w-3/4 rounded" />
+                    <div className="skeleton-shimmer h-3 w-32 rounded" />
+                  </div>
+                  <div className="skeleton-shimmer h-8 w-16 rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : projects.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20"
+            className="text-center py-24"
           >
-            <p className="text-muted-foreground mb-4">No projects yet. Start validating your first idea!</p>
+            <p className="text-muted-foreground mb-6 text-lg">No projects yet. Start validating your first idea!</p>
             <motion.button
+              whileHover={{ scale: 1.03, y: -1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate("/")}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold glow-border"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold glow-border"
             >
               <Plus className="w-4 h-4" />
               Start Building
@@ -98,15 +112,16 @@ const Dashboard = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
+                  whileHover={{ y: -2 }}
                   onClick={() => navigate(`/project/${project.id}`)}
-                  className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:border-primary/30 transition-colors"
+                  className="glass rounded-2xl p-6 cursor-pointer hover:border-primary/30 transition-all hover-lift"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-display font-semibold text-foreground truncate">{project.idea}</h3>
-                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
+                      <h3 className="font-display font-semibold text-lg text-foreground truncate">{project.idea}</h3>
+                      <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5" />
                           {new Date(project.created_at).toLocaleDateString()}
                         </span>
                       </div>
@@ -114,7 +129,7 @@ const Dashboard = () => {
                     {overall != null && (
                       <div className="flex items-center gap-2 ml-4">
                         <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                        <span className={`font-display text-2xl font-bold ${getScoreColor(overall)}`}>
+                        <span className={`font-display text-3xl font-bold ${getScoreColor(overall)}`}>
                           {overall}%
                         </span>
                       </div>
