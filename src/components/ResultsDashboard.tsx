@@ -316,10 +316,3 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
 };
 
 export default ResultsDashboard;
-        </motion.div>
-      </div>
-    </div>
-  );
-};
-
-export default ResultsDashboard;
