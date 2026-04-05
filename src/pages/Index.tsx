@@ -68,6 +68,7 @@ const Index = () => {
           conversation={conversation}
           onRestart={handleRestart}
           onSave={handleSaveProject}
+          projectId={projectId}
         />
       )}
     </div>
