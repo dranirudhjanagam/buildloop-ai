@@ -260,6 +260,11 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
         </div>
 
         {/* Comparison View */}
+        {/* Next Steps Roadmap */}
+        {!loading && sections.length > 0 && (
+          <NextStepsRoadmap projectId={projectId} />
+        )}
+
         {showComparison && improvements && predictedScores && scores && (
           <IdeaComparison
             improvements={improvements}
