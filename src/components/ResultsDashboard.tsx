@@ -7,6 +7,7 @@ import CircularProgress from "./CircularProgress";
 import LoadingSkeleton from "./LoadingSkeleton";
 import AnimatedBackground from "./AnimatedBackground";
 import IdeaComparison from "./IdeaComparison";
+import NextStepsRoadmap from "./NextStepsRoadmap";
 
 interface Message {
   role: "assistant" | "user";
