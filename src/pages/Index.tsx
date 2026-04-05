@@ -19,6 +19,7 @@ const Index = () => {
   const [screen, setScreen] = useState<Screen>("idea");
   const [idea, setIdea] = useState("");
   const [conversation, setConversation] = useState<Message[]>([]);
+  const [projectId, setProjectId] = useState<string | undefined>();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -35,24 +36,25 @@ const Index = () => {
   const handleRestart = () => {
     setIdea("");
     setConversation([]);
+    setProjectId(undefined);
     setScreen("idea");
   };
 
   const handleSaveProject = async (sections: any[], scores: any) => {
     if (!user) return;
-    const { error } = await supabase.from("projects").insert({
+    const { data, error } = await supabase.from("projects").insert({
       user_id: user.id,
       idea,
       conversation: conversation as any,
       results: sections as any,
       scores: scores as any,
-    });
+    }).select().single();
 
     if (error) {
       toast({ title: "Error", description: "Failed to save project", variant: "destructive" });
     } else {
+      setProjectId(data.id);
       toast({ title: "Saved!", description: "Project saved to your dashboard" });
-      navigate("/dashboard");
     }
   };
 
