@@ -257,12 +257,38 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
           })}
         </div>
 
+        {/* Comparison View */}
+        {showComparison && improvements && predictedScores && scores && (
+          <IdeaComparison
+            improvements={improvements}
+            scorePrediction={predictedScores}
+            originalScores={scores}
+            onClose={() => setShowComparison(false)}
+          />
+        )}
+
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="flex justify-center gap-4 mt-12"
+          className="flex flex-wrap justify-center gap-4 mt-12"
         >
+          {!showComparison && scores && (
+            <motion.button
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleImprove}
+              disabled={improving}
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-green-600 text-foreground font-semibold transition-all hover:bg-green-500 disabled:opacity-50"
+            >
+              {improving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {improving ? "Improving..." : "Improve My Idea"}
+            </motion.button>
+          )}
           {onSave && (
             <motion.button
               whileHover={{ scale: 1.03, y: -1 }}
@@ -283,6 +309,13 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
             <RotateCcw className="w-4 h-4" />
             Start Over
           </motion.button>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+export default ResultsDashboard;
         </motion.div>
       </div>
     </div>
