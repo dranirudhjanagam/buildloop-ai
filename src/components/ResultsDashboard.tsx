@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw, TrendingUp, Brain, Gauge, ShieldAlert, Save } from "lucide-react";
+import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw, TrendingUp, Brain, Gauge, ShieldAlert, Save, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import CircularProgress from "./CircularProgress";
 import LoadingSkeleton from "./LoadingSkeleton";
 import AnimatedBackground from "./AnimatedBackground";
+import IdeaComparison from "./IdeaComparison";
 
 interface Message {
   role: "assistant" | "user";
@@ -72,6 +73,10 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
   const [sections, setSections] = useState<Section[]>(savedSections || []);
   const [scores, setScores] = useState<Scores | null>(savedScores || null);
   const [loading, setLoading] = useState(!savedSections);
+  const [showComparison, setShowComparison] = useState(false);
+  const [improving, setImproving] = useState(false);
+  const [improvements, setImprovements] = useState<any[] | null>(null);
+  const [predictedScores, setPredictedScores] = useState<any | null>(null);
 
   useEffect(() => {
     if (!savedSections) generateReport();
@@ -98,6 +103,28 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImprove = async () => {
+    setImproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("improve-idea", {
+        body: { idea, conversation, sections, scores },
+      });
+      if (error) throw error;
+      if (data?.improvements) {
+        setImprovements(data.improvements);
+        setPredictedScores(data.score_prediction);
+        setShowComparison(true);
+      } else {
+        throw new Error("Invalid response");
+      }
+    } catch (e: any) {
+      console.error("Improve error:", e);
+      toast({ title: "Error", description: "Failed to generate improvements.", variant: "destructive" });
+    } finally {
+      setImproving(false);
     }
   };
 
@@ -230,12 +257,38 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
           })}
         </div>
 
+        {/* Comparison View */}
+        {showComparison && improvements && predictedScores && scores && (
+          <IdeaComparison
+            improvements={improvements}
+            scorePrediction={predictedScores}
+            originalScores={scores}
+            onClose={() => setShowComparison(false)}
+          />
+        )}
+
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="flex justify-center gap-4 mt-12"
+          className="flex flex-wrap justify-center gap-4 mt-12"
         >
+          {!showComparison && scores && (
+            <motion.button
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleImprove}
+              disabled={improving}
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-green-600 text-foreground font-semibold transition-all hover:bg-green-500 disabled:opacity-50"
+            >
+              {improving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {improving ? "Improving..." : "Improve My Idea"}
+            </motion.button>
+          )}
           {onSave && (
             <motion.button
               whileHover={{ scale: 1.03, y: -1 }}
