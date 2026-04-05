@@ -73,6 +73,10 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
   const [sections, setSections] = useState<Section[]>(savedSections || []);
   const [scores, setScores] = useState<Scores | null>(savedScores || null);
   const [loading, setLoading] = useState(!savedSections);
+  const [showComparison, setShowComparison] = useState(false);
+  const [improving, setImproving] = useState(false);
+  const [improvements, setImprovements] = useState<any[] | null>(null);
+  const [predictedScores, setPredictedScores] = useState<any | null>(null);
 
   useEffect(() => {
     if (!savedSections) generateReport();
