@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw, TrendingUp, Brain, Gauge, ShieldAlert, Save } from "lucide-react";
+import { Target, Users, Rocket, ClipboardCheck, AlertTriangle, RotateCcw, TrendingUp, Brain, Gauge, ShieldAlert, Save, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import CircularProgress from "./CircularProgress";
 import LoadingSkeleton from "./LoadingSkeleton";
 import AnimatedBackground from "./AnimatedBackground";
+import IdeaComparison from "./IdeaComparison";
 
 interface Message {
   role: "assistant" | "user";
