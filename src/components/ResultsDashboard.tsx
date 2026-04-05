@@ -106,6 +106,28 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
     }
   };
 
+  const handleImprove = async () => {
+    setImproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("improve-idea", {
+        body: { idea, conversation, sections, scores },
+      });
+      if (error) throw error;
+      if (data?.improvements) {
+        setImprovements(data.improvements);
+        setPredictedScores(data.score_prediction);
+        setShowComparison(true);
+      } else {
+        throw new Error("Invalid response");
+      }
+    } catch (e: any) {
+      console.error("Improve error:", e);
+      toast({ title: "Error", description: "Failed to generate improvements.", variant: "destructive" });
+    } finally {
+      setImproving(false);
+    }
+  };
+
   if (loading) return <LoadingSkeleton />;
 
   return (
