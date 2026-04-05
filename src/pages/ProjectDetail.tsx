@@ -55,6 +55,7 @@ const ProjectDetail = () => {
         onRestart={() => navigate("/dashboard")}
         savedSections={project.results}
         savedScores={project.scores}
+        projectId={project.id}
       />
     </div>
   );

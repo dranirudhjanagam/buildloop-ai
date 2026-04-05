@@ -7,6 +7,7 @@ import CircularProgress from "./CircularProgress";
 import LoadingSkeleton from "./LoadingSkeleton";
 import AnimatedBackground from "./AnimatedBackground";
 import IdeaComparison from "./IdeaComparison";
+import NextStepsRoadmap from "./NextStepsRoadmap";
 
 interface Message {
   role: "assistant" | "user";
@@ -33,6 +34,7 @@ interface ResultsDashboardProps {
   savedSections?: Section[];
   savedScores?: Scores;
   onSave?: (sections: Section[], scores: Scores | null) => void;
+  projectId?: string;
 }
 
 const SECTION_ICONS = [Target, Users, Rocket, ClipboardCheck, AlertTriangle];
@@ -69,7 +71,7 @@ const getOverallRingColor = (score: number) => {
   return "stroke-red-500";
 };
 
-const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedScores, onSave }: ResultsDashboardProps) => {
+const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedScores, onSave, projectId }: ResultsDashboardProps) => {
   const [sections, setSections] = useState<Section[]>(savedSections || []);
   const [scores, setScores] = useState<Scores | null>(savedScores || null);
   const [loading, setLoading] = useState(!savedSections);
@@ -258,6 +260,11 @@ const ResultsDashboard = ({ idea, conversation, onRestart, savedSections, savedS
         </div>
 
         {/* Comparison View */}
+        {/* Next Steps Roadmap */}
+        {!loading && sections.length > 0 && (
+          <NextStepsRoadmap projectId={projectId} />
+        )}
+
         {showComparison && improvements && predictedScores && scores && (
           <IdeaComparison
             improvements={improvements}

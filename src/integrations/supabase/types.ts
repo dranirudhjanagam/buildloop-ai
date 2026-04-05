@@ -44,6 +44,53 @@ export type Database = {
         }
         Relationships: []
       }
+      roadmap_steps: {
+        Row: {
+          created_at: string
+          id: string
+          is_done: boolean
+          project_id: string
+          sort_order: number
+          task_description: string
+          task_title: string
+          user_id: string
+          week: number
+          week_title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          project_id: string
+          sort_order?: number
+          task_description: string
+          task_title: string
+          user_id: string
+          week: number
+          week_title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          project_id?: string
+          sort_order?: number
+          task_description?: string
+          task_title?: string
+          user_id?: string
+          week?: number
+          week_title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_steps_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
