@@ -34,6 +34,7 @@ interface ResultsDashboardProps {
   savedSections?: Section[];
   savedScores?: Scores;
   onSave?: (sections: Section[], scores: Scores | null) => void;
+  projectId?: string;
 }
 
 const SECTION_ICONS = [Target, Users, Rocket, ClipboardCheck, AlertTriangle];
